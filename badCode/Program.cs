@@ -2,280 +2,404 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace badCode
+namespace TextAnalyzer
 {
-    public class TX
+    //интерфейсы для разделения ответственности
+    public interface ITextAnalyzer
     {
-        private int[] n = new int[100];
-        private List<string> h = new List<string>();
+        TextAnalysisResult AnalyzeText(string text);
+        Dictionary<char, int> AnalyzeCharacterFrequency(string text);
+    }
 
-        public void D(string s)
+    public interface ITextProcessor
+    {
+        void ProcessText(string text);
+        void ProcessTextWithOptions(string text, TextProcessingOptions options);
+    }
+
+    public interface IHistoryManager
+    {
+        void AddEntry(string entry);
+        IReadOnlyList<string> GetHistory();
+        void ClearHistory();
+    }
+
+    public interface IStatisticsManager
+    {
+        void AddWordCount(int wordCount);
+        IReadOnlyList<int> GetStatistics();
+        void ClearStatistics();
+    }
+
+    //классы для конкретных реализаций
+    public class WordCounter : ITextAnalyzer
+    {
+        public TextAnalysisResult AnalyzeText(string text)
         {
-            if (s == null || s.Length == 0)
-                return;
+            if (string.IsNullOrEmpty(text))
+                return new TextAnalysisResult(0, "", 0);
 
-            int wc = 0;
-            bool iw = false;
-            for (int i = 0; i < s.Length; i++)
+            int wordCount = CountWords(text);
+            string longestWord = FindLongestWord(text);
+            int totalLength = CalculateTotalWordLength(text);
+
+            return new TextAnalysisResult(wordCount, longestWord, totalLength);
+        }
+
+        public Dictionary<char, int> AnalyzeCharacterFrequency(string text)
+        {
+            var frequency = new Dictionary<char, int>();
+
+            foreach (char currentChar in text)
             {
-                if (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r' || s[i] == '.' || s[i] == ',')
+                if (!char.IsWhiteSpace(currentChar))
                 {
-                    if (iw)
+                    frequency[currentChar] = frequency.ContainsKey(currentChar)
+                        ? frequency[currentChar] + 1
+                        : 1;
+                }
+            }
+
+            return frequency;
+        }
+
+        private int CountWords(string text)
+        {
+            return text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        }
+
+        private string FindLongestWord(string text)
+        {
+            var words = text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            return words.OrderByDescending(word => word.Length).FirstOrDefault() ?? "";
+        }
+
+        private int CalculateTotalWordLength(string text)
+        {
+            var words = text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            return words.Sum(word => word.Length);
+        }
+    }
+
+    public class AdvancedTextAnalyzer : ITextAnalyzer
+    {
+        private readonly char[] _advancedSeparators = { ' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':' };
+
+        public TextAnalysisResult AnalyzeText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return new TextAnalysisResult(0, "", 0);
+
+            int wordCount = CountWordsByStateTracking(text);
+            string longestWord = FindLongestWordWithSeparators(text);
+            int totalLength = CalculateTotalWordLengthWithSeparators(text);
+
+            return new TextAnalysisResult(wordCount, longestWord, totalLength);
+        }
+
+        public Dictionary<char, int> AnalyzeCharacterFrequency(string text)
+        {
+            var frequency = new Dictionary<char, int>();
+
+            foreach (char currentChar in text)
+            {
+                if (char.IsLetterOrDigit(currentChar))
+                {
+                    frequency[currentChar] = frequency.ContainsKey(currentChar)
+                        ? frequency[currentChar] + 1
+                        : 1;
+                }
+            }
+
+            return frequency;
+        }
+
+        private int CountWordsByStateTracking(string text)
+        {
+            int wordCount = 0;
+            bool isInsideWord = false;
+
+            foreach (char currentChar in text)
+            {
+                if (_advancedSeparators.Contains(currentChar))
+                {
+                    if (isInsideWord)
                     {
-                        wc++;
-                        iw = false;
+                        wordCount++;
+                        isInsideWord = false;
                     }
                 }
                 else
                 {
-                    iw = true;
-                }
-            }
-            if (iw) wc++;
-
-            string lw = "";
-            string[] w = s.Split(' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':');
-            foreach (string word in w)
-            {
-                if (!string.IsNullOrEmpty(word))
-                {
-                    if (word.Length > lw.Length)
-                    {
-                        lw = word;
-                    }
+                    isInsideWord = true;
                 }
             }
 
-            Dictionary<char, int> cf = new Dictionary<char, int>();
-            for (int i = 0; i < s.Length; i++)
-            {
-                char c = s[i];
-                if (!char.IsWhiteSpace(c))
-                {
-                    if (cf.ContainsKey(c))
-                    {
-                        cf[c] = cf[c] + 1;
-                    }
-                    else
-                    {
-                        cf.Add(c, 1);
-                    }
-                }
-            }
-
-            if (h.Count >= 50)
-            {
-                h.RemoveAt(0);
-            }
-            h.Add($"Всего: {wc}, Самое большое: {lw}");
-
-            for (int i = 0; i < n.Length; i++)
-            {
-                if (n[i] == 0)
-                {
-                    n[i] = wc;
-                    break;
-                }
-            }
-
-            Console.WriteLine($"Всего: {wc}, Самое большое: {lw}");
+            if (isInsideWord) wordCount++;
+            return wordCount;
         }
 
-        public void P(string s, int t)
+        private string FindLongestWordWithSeparators(string text)
         {
-            if (t < 1 || t > 5)
-                t = 3;
-
-            string[] w = s.Split(' ', '\t', '\n', '\r', '.', ',', '!', '?', ';', ':');
-            string lw = "";
-            foreach (string word in w)
-            {
-                if (!string.IsNullOrEmpty(word))
-                {
-                    if (word.Length > lw.Length)
-                    {
-                        lw = word;
-                    }
-                }
-            }
-
-            int c = 0;
-            int i = 0;
-            while (i < s.Length)
-            {
-                while (i < s.Length && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-                    i++;
-                if (i < s.Length)
-                    c++;
-                while (i < s.Length && !(s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-                    i++;
-            }
-
-            if (t == 1)
-            {
-                Console.WriteLine($"{c}");
-            }
-            else if (t == 2)
-            {
-                Console.WriteLine($"Самое большое: {lw}");
-            }
-            else if (t == 3)
-            {
-                Console.WriteLine($"Всего: {c}, самое большое: {lw}");
-            }
-            else if (t == 4)
-            {
-                Dictionary<char, int> cf = new Dictionary<char, int>();
-                for (int j = 0; j < s.Length; j++)
-                {
-                    char ch = s[j];
-                    if (!char.IsWhiteSpace(ch))
-                    {
-                        if (cf.ContainsKey(ch))
-                        {
-                            cf[ch] = cf[ch] + 1;
-                        }
-                        else
-                        {
-                            cf.Add(ch, 1);
-                        }
-                    }
-                }
-                Console.WriteLine($"Всего: {c}, знаков: {cf.Count}");
-            }
-            else
-            {
-                Console.WriteLine($"Все: {c}, {lw}");
-            }
+            var words = text.Split(_advancedSeparators, StringSplitOptions.RemoveEmptyEntries);
+            return words.OrderByDescending(word => word.Length).FirstOrDefault() ?? "";
         }
 
-        public object A(string s, int type)
+        private int CalculateTotalWordLengthWithSeparators(string text)
         {
-            switch (type)
-            {
-                case 1:
-                    return s.Split(' ').Length;
-                case 2:
-                    return s.Split(' ').OrderByDescending(x => x.Length).FirstOrDefault();
-                case 3:
-                    Dictionary<char, int> d = new Dictionary<char, int>();
-                    foreach (char c in s)
-                    {
-                        if (d.ContainsKey(c)) d[c]++;
-                        else d[c] = 1;
-                    }
-                    return d;
-                case 4:
-                    return s.Length;
-                case 5:
-                    return s.Split(' ').Sum(x => x.Length);
-                default:
-                    return null;
-            }
-        }
-        public void PrintDict(Dictionary<char, int> dict)
-        {
-            if (dict == null) return;
-
-            foreach (var kvp in dict)
-            {
-                Console.WriteLine($"'{kvp.Key}': {kvp.Value}");
-            }
+            var words = text.Split(_advancedSeparators, StringSplitOptions.RemoveEmptyEntries);
+            return words.Sum(word => word.Length);
         }
     }
 
-    public class U
+    public class HistoryManager : IHistoryManager
     {
-        private List<string> data = new List<string>();
-        private int counter = 0;
+        private const int MaxHistorySize = 50;
+        private readonly List<string> _history = new List<string>();
+
+        public void AddEntry(string entry)
+        {
+            if (_history.Count >= MaxHistorySize)
+            {
+                _history.RemoveAt(0);
+            }
+            _history.Add(entry);
+        }
+
+        public IReadOnlyList<string> GetHistory() => _history.AsReadOnly();
+
+        public void ClearHistory() => _history.Clear();
+    }
+
+    public class StatisticsManager : IStatisticsManager
+    {
+        private const int MaxStatisticsSize = 100;
+        private readonly List<int> _statistics = new List<int>();
+
+        public void AddWordCount(int wordCount)
+        {
+            if (_statistics.Count >= MaxStatisticsSize)
+            {
+                _statistics.RemoveAt(0);
+            }
+            _statistics.Add(wordCount);
+        }
+
+        public IReadOnlyList<int> GetStatistics() => _statistics.AsReadOnly();
+
+        public void ClearStatistics() => _statistics.Clear();
+    }
+
+    //основной сервис, использующий зависимости через интерфейсы
+    public class TextAnalysisService : ITextProcessor
+    {
+        private readonly ITextAnalyzer _textAnalyzer;
+        private readonly IHistoryManager _historyManager;
+        private readonly IStatisticsManager _statisticsManager;
+        private readonly IResultFormatter _resultFormatter;
+
+        public TextAnalysisService(
+            ITextAnalyzer textAnalyzer,
+            IHistoryManager historyManager,
+            IStatisticsManager statisticsManager,
+            IResultFormatter resultFormatter)
+        {
+            _textAnalyzer = textAnalyzer;
+            _historyManager = historyManager;
+            _statisticsManager = statisticsManager;
+            _resultFormatter = resultFormatter;
+        }
 
         public void ProcessText(string text)
         {
-            string[] words = text.Split(' ');
-            int wordCount = words.Length;
-            string longest = words.OrderByDescending(w => w.Length).First();
+            var result = _textAnalyzer.AnalyzeText(text);
 
-            data.Add(text);
-            counter++;
+            _historyManager.AddEntry($"Слов: {result.WordCount}, Самое длинное слово: '{result.LongestWord}'");
+            _statisticsManager.AddWordCount(result.WordCount);
 
-            Console.WriteLine($"Обработано: {wordCount}, самое большое: {longest}");
-
-            if (data.Count > 100)
-            {
-                data.RemoveAt(0);
-            }
-
-            if (counter % 10 == 0)
-            {
-                Console.WriteLine($"Всего обработано: {counter}");
-            }
+            _resultFormatter.DisplayAnalysisResult(result);
         }
 
-        public void DoEverything(string text, bool analyze, bool save, bool log, bool cache)
+        public void ProcessTextWithOptions(string text, TextProcessingOptions options)
         {
-            if (analyze)
+            if (options.Analyze)
             {
-                var words = text.Split(' ').Length;
+                var result = _textAnalyzer.AnalyzeText(text);
+                _resultFormatter.DisplayAnalysisResult(result);
             }
 
-            if (save)
+            if (options.SaveToHistory)
             {
-                data.Add(text);
+                _historyManager.AddEntry($"Текст: {text.Substring(0, Math.Min(50, text.Length))}...");
             }
 
-            if (log)
+            if (options.CollectStatistics)
             {
-                Console.WriteLine(text);
-            }
-
-            if (cache && data.Count > 50)
-            {
-                data.RemoveRange(0, 10);
+                var result = _textAnalyzer.AnalyzeText(text);
+                _statisticsManager.AddWordCount(result.WordCount);
             }
         }
     }
 
+    //сервис для работы с частотой символов
+    public class CharacterFrequencyService
+    {
+        private readonly ITextAnalyzer _textAnalyzer;
+        private readonly IResultFormatter _resultFormatter;
+
+        public CharacterFrequencyService(ITextAnalyzer textAnalyzer, IResultFormatter resultFormatter)
+        {
+            _textAnalyzer = textAnalyzer;
+            _resultFormatter = resultFormatter;
+        }
+
+        public void AnalyzeAndDisplayFrequency(string text)
+        {
+            var frequency = _textAnalyzer.AnalyzeCharacterFrequency(text);
+            _resultFormatter.DisplayCharacterFrequency(frequency);
+        }
+
+        public Dictionary<char, int> GetCharacterFrequency(string text)
+        {
+            return _textAnalyzer.AnalyzeCharacterFrequency(text);
+        }
+    }
+
+    //интерфейс и реализации для форматирования результатов
+    public interface IResultFormatter
+    {
+        void DisplayAnalysisResult(TextAnalysisResult result);
+        void DisplayCharacterFrequency(Dictionary<char, int> frequency);
+        void DisplayComparisonResult(TextComparisonResult result);
+    }
+
+    public class ConsoleResultFormatter : IResultFormatter
+    {
+        public void DisplayAnalysisResult(TextAnalysisResult result)
+        {
+            Console.WriteLine($"Анализ текста:");
+            Console.WriteLine($"- Количество слов: {result.WordCount}");
+            Console.WriteLine($"- Самое длинное слово: '{result.LongestWord}'");
+            Console.WriteLine($"- Общая длина слов: {result.TotalWordLength}");
+        }
+
+        public void DisplayCharacterFrequency(Dictionary<char, int> frequency)
+        {
+            Console.WriteLine("Частотность символов:");
+            foreach (var entry in frequency.OrderByDescending(x => x.Value))
+            {
+                Console.WriteLine($"  '{entry.Key}': {entry.Value} раз");
+            }
+        }
+
+        public void DisplayComparisonResult(TextComparisonResult result)
+        {
+            Console.WriteLine($"Сравнение текстов:");
+            Console.WriteLine($"- Разница в количестве слов: {result.WordCountDifference}");
+            Console.WriteLine($"- Общий самый длинный слово: '{result.CommonLongestWord}'");
+        }
+    }
+
+    //DTO классы для передачи данных
+    public record TextAnalysisResult(int WordCount, string LongestWord, int TotalWordLength);
+
+    public record TextComparisonResult(int WordCountDifference, string CommonLongestWord);
+
+    public record TextProcessingOptions(
+        bool Analyze = true,
+        bool SaveToHistory = false,
+        bool CollectStatistics = false,
+        bool EnableLogging = false);
+
+    //класс для создания анализаторов
+    public static class TextAnalyzerFactory
+    {
+        public static ITextAnalyzer CreateSimpleAnalyzer() => new WordCounter();
+
+        public static ITextAnalyzer CreateAdvancedAnalyzer() => new AdvancedTextAnalyzer();
+
+        public static ITextAnalyzer CreateAnalyzer(bool useAdvanced = false)
+            => useAdvanced ? CreateAdvancedAnalyzer() : CreateSimpleAnalyzer();
+    }
+
+    //класс для сравнения текстов
+    public class TextComparator
+    {
+        private readonly ITextAnalyzer _textAnalyzer;
+
+        public TextComparator(ITextAnalyzer textAnalyzer)
+        {
+            _textAnalyzer = textAnalyzer;
+        }
+
+        public TextComparisonResult CompareTexts(string text1, string text2)
+        {
+            var result1 = _textAnalyzer.AnalyzeText(text1);
+            var result2 = _textAnalyzer.AnalyzeText(text2);
+
+            int wordCountDifference = Math.Abs(result1.WordCount - result2.WordCount);
+            string commonLongestWord = result1.LongestWord.Length >= result2.LongestWord.Length
+                ? result1.LongestWord
+                : result2.LongestWord;
+
+            return new TextComparisonResult(wordCountDifference, commonLongestWord);
+        }
+    }
+
+    //главный класс приложения
     internal class Program
     {
         public static void Main(string[] args)
         {
-            TX analyzer = new TX();
+            //настройка зависимостей 
+            var simpleAnalyzer = TextAnalyzerFactory.CreateSimpleAnalyzer();
+            var historyManager = new HistoryManager();
+            var statisticsManager = new StatisticsManager();
+            var resultFormatter = new ConsoleResultFormatter();
 
-            string tt = "Тестовый текст для проверки";
+            //создание сервисов
+            var textAnalysisService = new TextAnalysisService(
+                simpleAnalyzer,
+                historyManager,
+                statisticsManager,
+                resultFormatter);
 
-            Console.WriteLine("Тестирование");
-            analyzer.D(tt);
-            analyzer.P(tt, 3);
+            var characterFrequencyService = new CharacterFrequencyService(simpleAnalyzer, resultFormatter);
+            var textComparator = new TextComparator(simpleAnalyzer);
 
-            Console.WriteLine("\nТест класса U");
-            U processor = new U();
-            processor.ProcessText(tt);
+            //демонстрация работы
+            var testText = "текст солид си шарп много букв я люблю буквы";
 
-            Console.WriteLine("\nТест switch метода");
-            var result = analyzer.A(tt, 1);
-            Console.WriteLine($"Всего: {result}");
+            Console.WriteLine("Базовый анализ текста");
+            textAnalysisService.ProcessText(testText);
 
-            Console.WriteLine("\nТест с разными типами");
-            for (int i = 1; i <= 5; i++)
+            Console.WriteLine("\nАнализ частотности символов");
+            characterFrequencyService.AnalyzeAndDisplayFrequency(testText);
+
+            Console.WriteLine("\nСравнение текстов");
+            var text2 = "второй текст сравнение лето зима осень весна вторник среда октябрь";
+            var comparisonResult = textComparator.CompareTexts(testText, text2);
+            resultFormatter.DisplayComparisonResult(comparisonResult);
+
+            Console.WriteLine("\nОбработка с опциями");
+            var processingOptions = new TextProcessingOptions(
+                Analyze: true,
+                SaveToHistory: true,
+                CollectStatistics: true);
+
+            textAnalysisService.ProcessTextWithOptions(testText, processingOptions);
+
+            Console.WriteLine("\nИстория операций");
+            var history = historyManager.GetHistory();
+            foreach (var entry in history)
             {
-                var res = analyzer.A(tt, i);
-
-                if (i == 3) 
-                {
-                    Console.WriteLine($"Тип {i}:");
-                    if (res is Dictionary<char, int> dict)
-                    {
-                        foreach (var kvp in dict)
-                        {
-                            Console.WriteLine($"  '{kvp.Key}': {kvp.Value}");
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Тип {i}: {res}");
-                }
+                Console.WriteLine($"- {entry}");
             }
+
+            Console.WriteLine("\nСтатистика");
+            var stats = statisticsManager.GetStatistics();
+            Console.WriteLine($"Всего анализов: {stats.Count}");
+            Console.WriteLine($"Среднее количество слов: {stats.Average():F2}");
         }
     }
 }
