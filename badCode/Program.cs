@@ -1,36 +1,10 @@
-﻿using System;
+﻿using badCode;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace TextAnalyzer
 {
-    //интерфейсы для разделения ответственности
-    public interface ITextAnalyzer
-    {
-        TextAnalysisResult AnalyzeText(string text);
-        Dictionary<char, int> AnalyzeCharacterFrequency(string text);
-    }
-
-    public interface ITextProcessor
-    {
-        void ProcessText(string text);
-        void ProcessTextWithOptions(string text, TextProcessingOptions options);
-    }
-
-    public interface IHistoryManager
-    {
-        void AddEntry(string entry);
-        IReadOnlyList<string> GetHistory();
-        void ClearHistory();
-    }
-
-    public interface IStatisticsManager
-    {
-        void AddWordCount(int wordCount);
-        IReadOnlyList<int> GetStatistics();
-        void ClearStatistics();
-    }
-
     //классы для конкретных реализаций
     public class WordCounter : ITextAnalyzer
     {
